@@ -256,7 +256,7 @@ void spriteFill(std::uint8_t* line, std::uint32_t y, bool skip){
     return;
 }
 
-inline void myBGFiller(std::uint8_t* line, std::uint32_t y, bool skip){
+inline void myBGFiller16bit(std::uint8_t* line, std::uint32_t y, bool skip){
 
     // my Background filer, doesn't take into account scrolling or anything at all
     using PD=Pokitto::Display;
@@ -324,3 +324,68 @@ inline void myBGFiller(std::uint8_t* line, std::uint32_t y, bool skip){
 
 }
 
+inline void myBGFiller8bit(std::uint8_t* line, std::uint32_t y, bool skip){
+
+    // my Background filer, doesn't take into account scrolling or anything at all
+    using PD=Pokitto::Display;
+
+    if(skip) return;
+    if(y==0){
+        for(int x=0; x<220; x++)
+            line[x]=x;
+    }
+
+    // set bgcolor different for every line
+//    Pokitto::Display::palette[0] = hline_pal[hline[(y+(mapY/4))]];
+    
+    
+    int stX = -mapX%bgTileSizeW;
+    uint32_t x = stX;
+    uint32_t tileIndex = (mapX/bgTileSizeW) + ((y+mapY)/bgTileSizeH) * map[0];
+    uint16_t jStart = ((y+mapY) %bgTileSizeH) * bgTileSizeW; // current line in current tile
+
+    uint32_t tileStart;
+    uint32_t lineOffset;
+    uint32_t lineStart = -stX;
+    uint32_t isFlipped;
+
+    #define bgTileLine()\
+        isFlipped = map[2+tileIndex]>>15;\
+        tileStart = (map[2+tileIndex++]&32767)*tbt;\
+        lineOffset = tileStart + jStart;\
+        if(isFlipped){\
+            lineOffset += bgTileSizeW-1;\
+            for(uint32_t b=0; b<bgTileSizeW; b++){\
+                line[x++] = tiles[lineOffset--];\
+            }\
+        }else{\
+            for(uint32_t b=0; b<bgTileSizeW; b++){\
+                line[x++] = tiles[lineOffset++];\
+            }\
+        }        
+
+    #define bgHalfTile()\
+        isFlipped = map[2+tileIndex]>>15;\
+        tileStart = (map[2+tileIndex++]&32767)*tbt;\
+        lineOffset = tileStart + jStart;\
+        if(isFlipped){\
+            lineOffset += bgTileSizeW-1;\
+            for(uint32_t b=0; b<4; b++){\
+                line[x++] = tiles[lineOffset--];\
+            }\
+        }else{\
+            for(uint32_t b=0; b<4; b++){\
+                line[x++] = tiles[lineOffset++];\
+            }\
+        }
+
+    bgTileLine(); bgTileLine(); bgTileLine(); bgTileLine();
+    bgTileLine(); bgTileLine(); bgTileLine(); bgTileLine();
+    bgTileLine(); bgTileLine(); bgTileLine(); bgTileLine();
+    bgTileLine(); bgTileLine(); bgTileLine(); bgTileLine();
+    bgTileLine(); bgTileLine(); bgTileLine(); bgTileLine();
+    bgTileLine(); bgTileLine(); bgTileLine(); bgTileLine();
+    bgTileLine(); bgTileLine(); bgTileLine(); bgTileLine();
+    bgHalfTile();
+
+}
