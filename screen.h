@@ -7,12 +7,12 @@
 
 */
 
-void spritesToLine(std::uint32_t y){
+void spritesToLine(std::uint32_t y, std::uint8_t* line){
 
     if(spritesOnLine[y]==0) return;
 
-    auto scanLine = &Pokitto::Display::palette[0];
-
+    auto *scanLine = &line[0];
+    
     if(spriteCount>=0){
         uint8_t offset = 0;
         for(uint8_t spriteIndex = 1; spriteIndex<spriteCount; spriteIndex++){
@@ -50,7 +50,7 @@ void spritesToLine(std::uint32_t y){
                                     int pixPos = sprite.imageData[0] + sprite.x - offset;
                                     if(sprite.imageData[sprite.offset]){
                                         // we |1 to the colour value to make sure it isn't transparent
-                                        scanLine[PRESCAN + pixPos] = sprite.paletteData[sprite.imageData[sprite.offset]] | 1;
+                                        scanLine[PRESCAN + pixPos] = sprite.imageData[sprite.offset] | 1;
                                     }
                                     sprite.offset++;
                                 }
@@ -58,7 +58,7 @@ void spritesToLine(std::uint32_t y){
                                 for(offset=0; offset < sprite.imageData[0]; offset++){
                                     int pixPos = sprite.x + offset;
                                     if(sprite.imageData[sprite.offset]){
-                                        scanLine[PRESCAN + pixPos] = sprite.paletteData[sprite.imageData[sprite.offset]] | 1;
+                                        scanLine[PRESCAN + pixPos] = sprite.imageData[sprite.offset] | 1;
                                     }
                                     sprite.offset++;
                                 }
@@ -252,7 +252,7 @@ void spritesToLine(std::uint32_t y){
 }
 
 void spriteFill(std::uint8_t* line, std::uint32_t y, bool skip){
-    spritesToLine(y); // even without rendering ANY sprites this is very slow.
+    //spritesToLine(y); // even without rendering ANY sprites this is very slow.
     return;
 }
 
@@ -266,48 +266,47 @@ inline void myBGFiller16bit(std::uint8_t* line, std::uint32_t y, bool skip){
         for(int x=0; x<220; x++)
             line[x]=x;
     }
-
+/*
     // set bgcolor different for every line
 //    Pokitto::Display::palette[0] = hline_pal[hline[(y+(mapY/4))]];
-    
-    
-    int stX = -mapX%bgTileSizeW;
+
+    int stX = -(mapX&7);
     uint32_t x = stX;
-    uint32_t tileIndex = (mapX/bgTileSizeW) + ((y+mapY)/bgTileSizeH) * map[0];
-    uint16_t jStart = ((y+mapY) %bgTileSizeH) * bgTileSizeW; // current line in current tile
+    uint32_t tileIndex = (mapX>>3) + ((y+mapY)>>3) * map[0];
+    uint16_t jStart = ((y+mapY)&7) << 3; // current line in current tile
 
     uint32_t tileStart;
-    uint32_t lineOffset;
-    uint32_t lineStart = -stX;
     uint32_t isFlipped;
 
+    auto Pal = &Pokitto::Display::palette[0];
+    auto Map = &map[2];
+    auto MapPal = &map_pal[0];
+
     #define bgTileLine()\
-        isFlipped = map[2+tileIndex]>>15;\
-        tileStart = (map[2+tileIndex++]&32767)*tbt;\
-        lineOffset = tileStart + jStart;\
+        isFlipped = (Map[tileIndex]>>15);\
+        tileStart = jStart + (Map[tileIndex++]&32767)*tbt;\
         if(isFlipped){\
-            lineOffset += bgTileSizeW-1;\
-            for(uint32_t b=0; b<bgTileSizeW; b++){\
-                Pokitto::Display::palette[x++] = map_pal[tiles[lineOffset--]];\
+            tileStart += 7;\
+            for(int b=-8; b; b++){\
+                *Pal++ = MapPal[tiles[tileStart--]];\
             }\
         }else{\
-            for(uint32_t b=0; b<bgTileSizeW; b++){\
-                Pokitto::Display::palette[x++] = map_pal[tiles[lineOffset++]];\
+            for(int b=-8; b; b++){\
+                *Pal++ = MapPal[tiles[tileStart++]];\
             }\
         }        
 
     #define bgHalfTile()\
-        isFlipped = map[2+tileIndex]>>15;\
-        tileStart = (map[2+tileIndex++]&32767)*tbt;\
-        lineOffset = tileStart + jStart;\
+        isFlipped = Map[tileIndex]>>15;\
+        tileStart = jStart + (Map[tileIndex++]&32767)*tbt;\
         if(isFlipped){\
-            lineOffset += bgTileSizeW-1;\
-            for(uint32_t b=0; b<4; b++){\
-                Pokitto::Display::palette[x++] = map_pal[tiles[lineOffset--]];\
+            tileStart += 7;\
+            for(int b=-4; b; b++){\
+                *Pal++ = MapPal[tiles[tileStart--]];\
             }\
         }else{\
-            for(uint32_t b=0; b<4; b++){\
-                Pokitto::Display::palette[x++] = map_pal[tiles[lineOffset++]];\
+            for(int b=-4; b; b++){\
+                *Pal++ = MapPal[tiles[tileStart++]];\
             }\
         }
 
@@ -321,7 +320,7 @@ inline void myBGFiller16bit(std::uint8_t* line, std::uint32_t y, bool skip){
     bgHalfTile();
 
     spritesToLine(y); // even without rendering ANY sprites this is very slow.
-
+*/
 }
 
 inline void myBGFiller8bit(std::uint8_t* line, std::uint32_t y, bool skip){
@@ -337,45 +336,45 @@ inline void myBGFiller8bit(std::uint8_t* line, std::uint32_t y, bool skip){
 
     // set bgcolor different for every line
 //    Pokitto::Display::palette[0] = hline_pal[hline[(y+(mapY/4))]];
-    
-    
-    int stX = -mapX%bgTileSizeW;
+
+    int stX = 0;
     uint32_t x = stX;
-    uint32_t tileIndex = (mapX/bgTileSizeW) + ((y+mapY)/bgTileSizeH) * map[0];
-    uint16_t jStart = ((y+mapY) %bgTileSizeH) * bgTileSizeW; // current line in current tile
+    uint32_t tileIndex = (y/bgTileSizeH) * background_map[0];
+    uint16_t jStart = (y %bgTileSizeH) * bgTileSizeW; // current line in current tile
 
     uint32_t tileStart;
-    uint32_t lineOffset;
-    uint32_t lineStart = -stX;
     uint32_t isFlipped;
 
+    auto Map = &globalMap[0];
+    auto Tile = &globalTile[0];
+    auto Line = &line[0];
+
+
     #define bgTileLine()\
-        isFlipped = map[2+tileIndex]>>15;\
-        tileStart = (map[2+tileIndex++]&32767)*tbt;\
-        lineOffset = tileStart + jStart;\
+        isFlipped = Map[tileIndex]>>15;\
+        tileStart = jStart + (Map[tileIndex++]&32767)*tbt;\
         if(isFlipped){\
-            lineOffset += bgTileSizeW-1;\
-            for(uint32_t b=0; b<bgTileSizeW; b++){\
-                line[x++] = tiles[lineOffset--];\
+            tileStart += 7;\
+            for(int b=-8; b; b++){\
+                *Line++ = Tile[tileStart--];\
             }\
         }else{\
-            for(uint32_t b=0; b<bgTileSizeW; b++){\
-                line[x++] = tiles[lineOffset++];\
+            for(int b=-8; b; b++){\
+                *Line++ = Tile[tileStart++];\
             }\
         }        
 
     #define bgHalfTile()\
-        isFlipped = map[2+tileIndex]>>15;\
-        tileStart = (map[2+tileIndex++]&32767)*tbt;\
-        lineOffset = tileStart + jStart;\
+        isFlipped = Map[tileIndex]>>15;\
+        tileStart = jStart + (Map[tileIndex++]&32767)*tbt;\
         if(isFlipped){\
-            lineOffset += bgTileSizeW-1;\
-            for(uint32_t b=0; b<4; b++){\
-                line[x++] = tiles[lineOffset--];\
+            tileStart += 7;\
+            for(int b=-4; b; b++){\
+                *Line++ = Tile[tileStart--];\
             }\
         }else{\
-            for(uint32_t b=0; b<4; b++){\
-                line[x++] = tiles[lineOffset++];\
+            for(int b=-4; b; b++){\
+                *Line++ = Tile[tileStart++];\
             }\
         }
 
@@ -386,6 +385,8 @@ inline void myBGFiller8bit(std::uint8_t* line, std::uint32_t y, bool skip){
     bgTileLine(); bgTileLine(); bgTileLine(); bgTileLine();
     bgTileLine(); bgTileLine(); bgTileLine(); bgTileLine();
     bgTileLine(); bgTileLine(); bgTileLine(); bgTileLine();
-    bgHalfTile();
+    //bgHalfTile();
+
+//    spritesToLine(y, line); // even without rendering ANY sprites this is very slow.
 
 }

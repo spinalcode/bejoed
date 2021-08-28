@@ -1,0 +1,16 @@
+background
+
+Map Format: Text
+
+Map Size: 28x22 tiles
+Gfx Tile Size: 8x8 pixels
+
+Tiles File Size: 1x145 tiles
+
+Files Generated:
+  F:\Pokitto\FemtoIDE\projects\!BeJoed\raw\background.map
+  F:\Pokitto\FemtoIDE\projects\!BeJoed\raw\background_Tiles.bmp
+  F:\Pokitto\FemtoIDE\projects\!BeJoed\raw\background_Info.txt
+
+Process Started: 16:33:52
+Process Ended: 16:33:52
