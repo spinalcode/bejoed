@@ -7,16 +7,16 @@
 #define NEW 1
 #define RELEASED 2
 uint8_t CompletePad, ExPad, TempPad, myPad;
-bool _A[3], _B[3], _C[3], _Up[3], _Down[3], _Left[3], _Right[3];
+bool _BA[3], _BB[3], _BC[3], _BUp[3], _BDown[3], _BLeft[3], _BRight[3];
 
 void UPDATEPAD(int pad, int var) {
-        _C[pad] =      (var)&1;
-        _B[pad] = (var >> 1)&1;
-        _A[pad] = (var >> 2)&1;
-     _Down[pad] = (var >> 3)&1;
-     _Left[pad] = (var >> 4)&1;
-    _Right[pad] = (var >> 5)&1;
-       _Up[pad] = (var >> 6)&1;
+        _BC[pad] =      (var)&1;
+        _BB[pad] = (var >> 1)&1;
+        _BA[pad] = (var >> 2)&1;
+     _BDown[pad] = (var >> 3)&1;
+     _BLeft[pad] = (var >> 4)&1;
+    _BRight[pad] = (var >> 5)&1;
+       _BUp[pad] = (var >> 6)&1;
 }
 
 void UpdatePad(int joy_code){

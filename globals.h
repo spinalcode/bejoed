@@ -4,10 +4,9 @@ int scoreAdder=0;
 int lastBonus=0;
 int gamemode=0;
 int multiChain=0;
-int playTime=0;
+int gameTimer=0;
 
 int oldAction=0;
-
 
 uint8_t numberWidth[]={8,4,6,6,7,6,6,6,6,6};
 uint8_t bigNumberWidth[]={16,7,11,11,13,12,12,10,11,12,9};

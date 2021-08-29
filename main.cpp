@@ -2,6 +2,7 @@
 #include <Pokitto.h>
 #include <Tilemap.hpp>
 
+#include <LibAudio>
 #include <file>
 #include "globals.h"
 
@@ -10,6 +11,7 @@
 #include "background.h"
 #include "buttonhandling.h"
 #include "image.h"
+#include "scores.h"
 
 auto globalMap = &background_map[2];
 auto globalTile = &background_Tiles[0];
@@ -308,28 +310,28 @@ void gameLogic(){
                 multiChain++;
                 lastBonus *= (multiChain+1);
             }
-            if(_Left[NEW]){
+            if(_BLeft[NEW]){
                 if(selecting){
                     if(cursorX>0 && cursorSelectY==0 && cursorSelectX>-1)cursorSelectX--;
                 }else{
                     if(cursorX>0)cursorX--;
                 }
             }else
-            if(_Right[NEW]){
+            if(_BRight[NEW]){
                 if(selecting){
                     if(cursorX<7 && cursorSelectY==0 && cursorSelectX<1)cursorSelectX++;
                 }else{
                     if(cursorX<7)cursorX++;
                 }
             }else
-            if(_Up[NEW]){
+            if(_BUp[NEW]){
                 if(selecting){
                     if(cursorY>0 && cursorSelectX==0 && cursorSelectY>-1)cursorSelectY--;
                 }else{
                     if(cursorY>0)cursorY--;
                 }
             }else
-            if(_Down[NEW]){
+            if(_BDown[NEW]){
                 if(selecting){
                     if(cursorY<7 && cursorSelectX==0 && cursorSelectY<1)cursorSelectY++;
                 }else{
@@ -337,7 +339,7 @@ void gameLogic(){
                 }
             }else
 
-            if(_A[NEW]){
+            if(_BA[NEW]){
                 selecting = 1-selecting;
                 if(selecting==false){
                     if(cursorSelectX !=0 || cursorSelectY !=0){
@@ -497,7 +499,7 @@ void gameLogic(){
         //myPrint(11,48,tempText);
         
         int scoreX = 11;
-        int scoreY = 48;
+        int scoreY = 51;
         int tempScore = myScore;
         int strWidth = 0;
 
@@ -529,18 +531,46 @@ void gameLogic(){
                 scoreX+=bigNumberWidth[tempDigit];
             }
         }
+
+
+    Pokitto::Display::drawSprite(8+gameTimer, 152, timebar);
+    sprintf(tempText,"Time:%d ",gameTimer);
+    myPrint(0,8,tempText);
     
 }
 
 void titleScreen(){
-    //Pokitto::Display::drawSprite(0, 0, titlescreen);
-    if(_A[NEW]){gamemode=10;}
+    if(_BA[NEW]){gamemode=10;}
 }
+
+void scoreboard(){
+
+    char tempText[40];
+    for(int t=0; t<10; t++){
+        sprintf(tempText,"%d:%s - %d ",t+1, playerName[t], playerScore[t]);
+        myPrint(16 , 28 +12*t ,tempText);
+    }
+
+    if(_BA[NEW]){gamemode=0;}
+}
+
+void yourScore(){
+
+    char tempText[40];
+    sprintf(tempText,"You scored - %d ", score);
+    myPrint(16 , 28 ,tempText);
+
+    if(_BA[NEW]){gamemode=20;}
+}
+
+
 
 int main(){
     using PC=Pokitto::Core;
+    using PS=Pokitto::Sound;
     using PD=Pokitto::Display;
     using PB=Pokitto::Buttons;
+
 
     PC::begin();
     PD::load565Palette(background_Tiles_pal);
@@ -576,7 +606,7 @@ int main(){
     selecting=0;
 
     updateButtons();
-    while(_A[HELD] || _A[NEW]){
+    while(_BA[HELD] || _BA[NEW]){
         updateButtons();
     }
 
@@ -586,6 +616,15 @@ int main(){
 
     globalMap = &titlescreen_map[0];
     globalTile = &titlescreen_Tiles[0];
+
+    gamemode=20;
+    globalMap = &scoreboard_map[0];
+    globalTile = &scoreboard_Tiles[0];
+
+    auto music = Audio::play("data/bejoed/titlescreen.pcm"); // streams are on channel 0 by default
+    //Audio::stop();
+
+    loadScores();
 
     while( PC::isRunning() ){
         
@@ -601,18 +640,80 @@ int main(){
                 break;
             case 10:
                 gameLogic();
+                if(fpsCounter==0){
+                    gameTimer+=2;
+                    if(gameTimer>=194){
+                        int position = 11; // outside of scoreboard
+                        printf("Score:%d\n",score);
+                        for(int t=9; t>=0; t--){
+                            if(score >= playerScore[t]){
+                                printf("Score:%d is > %d, %d\n",score, playerScore[t], t);
+                                position = t;
+                            }
+                        }
+                        if(position <10){
+                            // made it!
+                            for(int t=9; t>position; t--){
+                                playerScore[t] = playerScore[t-1];
+                                sprintf(playerName[t],"%s",playerName[t-1]);
+                                //strcpy(playerName[t-1],playerName[t]);
+                            }
+                            sprintf(playerName[position],"Your Name");
+                            //strcpy(playerName[position], "Your Name");
+                            playerScore[position] = score;
+                        }
+                        printf("Position:%d\n",position);
+                        
+                        gamemode=30;
+                    }
+                }
+                break;
+            case 20:
+                scoreboard();
+                break;
+            case 30:
+                yourScore();
                 break;
         }
+
 
         if(gamemode != oldGameMode){
             switch(gamemode){
                 case 0:
-                    globalMap = &titlescreen_map[2];
+                    // stream music from the SD card
+                    Audio::stop();
+                    music = Audio::play("data/bejoed/titlescreen.pcm"); // streams are on channel 0 by default
+                    if(music) music->setLoop(true);
+                    globalMap = &titlescreen_map[0];
                     globalTile = &titlescreen_Tiles[0];
                     break;
                 case 10:
+                    gameTimer=0;
+                    score=0;
+                    myScore=0;
                     globalMap = &background_map[2];
                     globalTile = &background_Tiles[0];
+                    // stream music from the SD card
+                    Audio::stop();
+                    music = Audio::play("data/bejoed/levelmusic.pcm"); // streams are on channel 0 by default
+                    if(music) music->setLoop(false);                    
+                    break;
+                case 20: // high score table
+                    gameTimer=0;
+                    globalMap = &scoreboard_map[0];
+                    globalTile = &scoreboard_Tiles[0];
+                    // stream music from the SD card
+                    Audio::stop();
+                    music = Audio::play("data/bejoed/levelmusic.pcm"); // streams are on channel 0 by default
+                    if(music) music->setLoop(false);                    
+                    break;
+                case 30: // show your score
+                    globalMap = &scoreboard_map[0];
+                    globalTile = &scoreboard_Tiles[0];
+                    // stream music from the SD card
+                    Audio::stop();
+                    music = Audio::play("data/bejoed/levelmusic.pcm"); // streams are on channel 0 by default
+                    if(music) music->setLoop(false);                    
                     break;
             }
             
@@ -626,6 +727,9 @@ int main(){
             fpsCounter = 0;
         }
 
+        char tempText[20];
+        sprintf(tempText,"Mode:%d ",gamemode);
+        myPrint(0,168,tempText);
     }
     
     return 0;
